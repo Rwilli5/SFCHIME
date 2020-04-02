@@ -1,0 +1,52 @@
+---
+title: "Draft_expected_bed_usage_20200402"
+author: "Gabriel Odom"
+date: "4/2/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Python Setup
+We install the R package `reticulate` with the following commands:
+```{r}
+# install.packages("reticulate")
+library(reticulate)
+```
+
+We can run Python code with the following:
+```{python}
+import numpy as np
+print("Hello, World")
+```
+
+To hide code and only show output, add the chunk option `echo = FALSE`:
+```{python, echo = FALSE}
+# import pandas as pd
+print(sys.version_info)
+```
+
+
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
