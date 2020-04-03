@@ -10,7 +10,7 @@ DATE ACCESSED: 2020-04-03
 from typing import Optional
 from datetime import date, datetime
 
-from .base import Validator
+from base import Validator
 
 
 class Bounded(Validator):
