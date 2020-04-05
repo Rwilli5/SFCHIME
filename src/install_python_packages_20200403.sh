@@ -11,3 +11,10 @@ pip install datetime
 pip install collections
 pip install typing
 pip install abc
+
+# for Anshul's script
+pip install functools
+pip install pandas
+pip install streamlit
+pip install numpy
+pip install altair

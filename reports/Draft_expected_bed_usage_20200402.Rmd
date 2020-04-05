@@ -23,7 +23,7 @@ library(reticulate)
 
 We can run Python code with the following:
 ```{python}
-import numpy as np
+# import numpy as np
 print("Hello, World")
 ```
 
@@ -31,6 +31,12 @@ To hide code and only show output, add the chunk option `echo = FALSE`:
 ```{python, echo = FALSE}
 # import pandas as pd
 print(sys.version_info)
+```
+
+### Return to R Code
+Right now, if we were running this code interactively, then our prompt is a python prompt. We get back to R by calling a code chunk with R again. Also, we could use the python command `quit` (with no parentheses) to escape the python command prompt.
+```{r}
+"And we're back"
 ```
 
 
