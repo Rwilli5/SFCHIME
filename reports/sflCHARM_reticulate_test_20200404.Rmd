@@ -16,7 +16,20 @@ library(reticulate)
 library(tidyverse)
 ```
 
-The shell script to install the packages we need is in `src/install_python_packages_20200403.sh`. This creates a conda environment called `env_sflCHARM` and activates it.
+The shell script to install the packages we need is in `src/install_python_packages_20200403.sh`. This creates a conda environment called `env_sflCHARM` and activates it. At current, I have been unable to run these commands on Windows.
+
+On Mac, I have a Conda environment created for this project. In the terminal, I type `which python` and it tells me
+```{bash, eval=FALSE}
+which python
+```
+```
+/Users/gabrielodom/anaconda3/envs/env_sflCHARM/bin/python
+```
+
+I then "point" `reticulate` to this particular version of Python (replete with the environment that we installed with Anaconda).
+```{r}
+use_python("/Users/gabrielodom/anaconda3/envs/env_sflCHARM/bin/python")
+```
 
 We also have some Python libraries to load.
 ```{python}
@@ -28,9 +41,150 @@ import numpy as np
 import altair as alt
 ```
 
+IT WORKS!!!!!! (This seriously took a full weekend to figure out, and then I called in the big guns: Tim N. and Athina H.)
 
-Now, we want to set our initial parameters.
+*******************************************************************************
+</br>
+
+## Parameters
+Now, we want to set our initial parameters. We organise them the same way as on the CHARM app.
+
+### Hospital Parameters
 ```{python}
+# Regional Population
+S_default = 2761581
+S = S_default
 
+# Hospital Market Share
+Penn_market_share = 0.15
+
+# Currently Hospitalised Patients (at current hospital?)
+known_cases = 400
+current_hosp = known_cases
+
+# Currently Hospitalised Patients
+known_infections = 1000
+initial_infections = known_infections
+```
+
+### Spread and Contact Parameters
+```{python}
+# Doubling Time
+doubling_time = 6
+
+# Social Distancing (% reduction in social contact)
+relative_contact_rate = 0
+```
+
+### Severity Rates
+```{python}
+# Hospitalisation (% of total infections)
+hosp_rate = 0.05
+
+# ICU (% of total infections)
+icu_rate = 0.02
+
+# Ventilated (% of total infections)
+vent_rate = 0.01
+```
+
+### Severity Times
+```{python}
+# Infectious Days
+recovery_days = 14.0
+
+# Average hospital length of stay (days)
+hosp_los = 7
+
+# Average ICU length of stay (days)
+icu_los = 9
+
+# Average length of stay on a ventilator (days)
+vent_los = 10
+```
+
+
+## Directly Estimated Parameters
+Given the parameters above, we calculate the following disease spread parameters.
+
+### SIR Initial Values
+```{python}
+total_infections = current_hosp / Penn_market_share / hosp_rate
+print(total_infections)
+
+detection_prob = initial_infections / total_infections
+print(detection_prob)
+
+S, I, R = S, initial_infections / detection_prob, 0
+print(I)
+
+intrinsic_growth_rate = 2 ** (1 / doubling_time) - 1
+print(intrinsic_growth_rate)
+```
+**NOTE**: the total infections and initial infections are equal at $t = 0$.
+
+### SIR Transition Rates
+```{python}
+gamma = 1 / recovery_days
+# mean recovery rate, gamma, (in 1/days).
+print(gamma)
+
+beta = (intrinsic_growth_rate + gamma) / S * (1 - relative_contact_rate)
+# Contact rate, beta
+# {rate based on doubling time} / {initial S}
+print(beta)
+
+r_t = beta / gamma * S 
+# Current Reproduction Number
+# r_t is r_0 after distancing
+print(r_t)
+
+r_naught = r_t / (1 - relative_contact_rate)
+# Initial Reproduction Number
+print(r_naught)
+
+doubling_time_t = 1 / np.log2(beta * S - gamma + 1) 
+# Current Doubling Time
+# doubling time after distancing
+print(doubling_time_t)
+```
+
+*******************************************************************************
+</br>
+
+## Model Specification
+We can now specify the SIR model at outset and over time.
+```{python}
+# SIR at Outset
+def sir(y, beta, gamma, N):
+    S, I, R = y
+    Sn = (-beta * S * I) + S
+    In = (beta * S * I - gamma * I) + I
+    Rn = gamma * I + R
+    if Sn < 0:
+        Sn = 0
+    if In < 0:
+        In = 0
+    if Rn < 0:
+        Rn = 0
+
+    scale = N / (Sn + In + Rn)
+    return Sn * scale, In * scale, Rn * scale
+
+# Dynamic SIR 
+def sim_sir(S, I, R, beta, gamma, n_days = 100, beta_decay = None):
+    N = S + I + R
+    s, i, r = [S], [I], [R]
+    for day in range(n_days):
+        y = S, I, R
+        S, I, R = sir(y, beta, gamma, N)
+        if beta_decay:
+            beta = beta * (1 - beta_decay)
+        s.append(S)
+        i.append(I)
+        r.append(R)
+
+    s, i, r = np.array(s), np.array(i), np.array(r)
+    return s, i, r
 ```
 
