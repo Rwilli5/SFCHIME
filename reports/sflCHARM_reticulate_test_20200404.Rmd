@@ -16,19 +16,35 @@ library(reticulate)
 library(tidyverse)
 ```
 
-The shell script to install the packages we need is in `src/install_python_packages_20200403.sh`. This creates a conda environment called `env_sflCHARM` and activates it. At current, I have been unable to run these commands on Windows.
+The shell script to install the packages we need is in `src/install_python_packages_20200403.sh`. This creates a conda environment called `env_sflCHIME` and activates it. At current, I have been unable to run these commands on Windows.
+
+<!-- There is another way: using the Anaconda Navigator GUI, -->
+
+<!-- 1. Click "Environments" (top left under "Home") -->
+<!-- 2. Click "Create" (the plus sign) -->
+<!-- 3. In the pop-up, give the environment a name, select a Python version (I chose 3.6), and select if you wany to include R or not. -->
+<!-- 4. In the "Search Packages" box, type the packages that you need (`altair`, `pandas`, and `numpy`). -->
 
 On Mac, I have a Conda environment created for this project. In the terminal, I type `which python` and it tells me
 ```{bash, eval=FALSE}
 which python
 ```
 ```
-/Users/gabrielodom/anaconda3/envs/env_sflCHARM/bin/python
+/Users/gabrielodom/anaconda3/envs/env_sflCHIME/bin/python
 ```
 
-I then "point" `reticulate` to this particular version of Python (replete with the environment that we installed with Anaconda).
+If it says
+```
+/usr/bin/python
+```
+(or some other place), then something is wrong.
+
+I specifically want this python environment, so I "point" `reticulate` to the particular environment that we installed with Anaconda, replete with the version of Python we selected and all associated libraries. (**NOTE**: this line must be executed before any other `reticulate` functions or Python calls, otherwise it will have no effect.)
 ```{r}
-use_python("/Users/gabrielodom/anaconda3/envs/env_sflCHARM/bin/python")
+use_python(
+    "/Users/gabrielodom/anaconda3/envs/env_sflCHIME/bin/python",
+    required = TRUE
+)
 ```
 
 We also have some Python libraries to load.
@@ -41,7 +57,7 @@ import numpy as np
 import altair as alt
 ```
 
-IT WORKS!!!!!! (This seriously took a full weekend to figure out, and then I called in the big guns: Tim N. and Athina H.)
+IT WORKS!!!!!! (This seriously took a full weekend to figure out, and then I called in the big guns: Tim N. and Athina H. Note that this is not compatible with environments created via Anaconda, at least not by default.)
 
 *******************************************************************************
 </br>
@@ -149,6 +165,8 @@ doubling_time_t = 1 / np.log2(beta * S - gamma + 1)
 print(doubling_time_t)
 ```
 
+As an aside, if I want to access any of these values in R (for instance, $R_0$), I can call them as `py$r_naught`, which yields `r py$r_naught`.
+
 *******************************************************************************
 </br>
 
@@ -172,7 +190,7 @@ def sir(y, beta, gamma, N):
     return Sn * scale, In * scale, Rn * scale
 
 # Dynamic SIR 
-def sim_sir(S, I, R, beta, gamma, n_days = 100, beta_decay = None):
+def sim_sir(S, I, R, beta, gamma, n_days, beta_decay = None):
     N = S + I + R
     s, i, r = [S], [I], [R]
     for day in range(n_days):
@@ -186,5 +204,20 @@ def sim_sir(S, I, R, beta, gamma, n_days = 100, beta_decay = None):
 
     s, i, r = np.array(s), np.array(i), np.array(r)
     return s, i, r
+```
+
+Run the model, assuming no decay in contact rate over the next 30 days.
+```{python, eval = FALSE}
+n_days = 30
+beta_decay = 0.0
+
+s, i, r = sim_sir(S, I, R, beta, gamma, n_days, beta_decay = beta_decay)
+```
+**ERROR**: `Error in py_call_impl(callable, dots$args, dots$keywords) : `
+`  TypeError: unsupported operand type(s) for +: 'float' and 'type'`
+
+We now inspect the results of this model
+```{python}
+
 ```
 

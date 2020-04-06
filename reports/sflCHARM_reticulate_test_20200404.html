@@ -374,12 +374,23 @@ summary {
 <p>We need to load some R packages before we can perform our computing.</p>
 <pre class="r"><code>library(reticulate)
 library(tidyverse)</code></pre>
-<p>The shell script to install the packages we need is in <code>src/install_python_packages_20200403.sh</code>. This creates a conda environment called <code>env_sflCHARM</code> and activates it. At current, I have been unable to run these commands on Windows.</p>
+<p>The shell script to install the packages we need is in <code>src/install_python_packages_20200403.sh</code>. This creates a conda environment called <code>env_sflCHIME</code> and activates it. At current, I have been unable to run these commands on Windows.</p>
+<!-- There is another way: using the Anaconda Navigator GUI, -->
+<!-- 1. Click "Environments" (top left under "Home") -->
+<!-- 2. Click "Create" (the plus sign) -->
+<!-- 3. In the pop-up, give the environment a name, select a Python version (I chose 3.6), and select if you wany to include R or not. -->
+<!-- 4. In the "Search Packages" box, type the packages that you need (`altair`, `pandas`, and `numpy`). -->
 <p>On Mac, I have a Conda environment created for this project. In the terminal, I type <code>which python</code> and it tells me</p>
 <pre class="bash"><code>which python</code></pre>
-<pre><code>/Users/gabrielodom/anaconda3/envs/env_sflCHARM/bin/python</code></pre>
-<p>I then “point” <code>reticulate</code> to this particular version of Python (replete with the environment that we installed with Anaconda).</p>
-<pre class="r"><code>use_python(&quot;/Users/gabrielodom/anaconda3/envs/env_sflCHARM/bin/python&quot;)</code></pre>
+<pre><code>/Users/gabrielodom/anaconda3/envs/env_sflCHIME/bin/python</code></pre>
+<p>If it says</p>
+<pre><code>/usr/bin/python</code></pre>
+<p>(or some other place), then something is wrong.</p>
+<p>I specifically want this python environment, so I “point” <code>reticulate</code> to the particular environment that we installed with Anaconda, replete with the version of Python we selected and all associated libraries. (<strong>NOTE</strong>: this line must be executed before any other <code>reticulate</code> functions or Python calls, otherwise it will have no effect.)</p>
+<pre class="r"><code>use_python(
+    &quot;/Users/gabrielodom/anaconda3/envs/env_sflCHIME/bin/python&quot;,
+    required = TRUE
+)</code></pre>
 <p>We also have some Python libraries to load.</p>
 <pre class="python"><code>from functools import reduce
 from typing import Tuple, Dict, Any
@@ -387,7 +398,7 @@ import pandas as pd
 import streamlit as st
 import numpy as np
 import altair as alt</code></pre>
-<p>IT WORKS!!!!!! (This seriously took a full weekend to figure out, and then I called in the big guns: Tim N. and Athina H.)</p>
+<p>IT WORKS!!!!!! (This seriously took a full weekend to figure out, and then I called in the big guns: Tim N. and Athina H. Note that this is not compatible with environments created via Anaconda, at least not by default.)</p>
 <hr />
 <p></br></p>
 </div>
@@ -489,6 +500,7 @@ print(r_naught)</code></pre>
 # doubling time after distancing
 print(doubling_time_t)</code></pre>
 <pre><code>## 5.999999999999998</code></pre>
+<p>As an aside, if I want to access any of these values in R (for instance, <span class="math inline">\(R_0\)</span>), I can call them as <code>py$r_naught</code>, which yields 2.7144687.</p>
 <hr />
 <p></br></p>
 </div>
@@ -513,7 +525,7 @@ def sir(y, beta, gamma, N):
     return Sn * scale, In * scale, Rn * scale
 
 # Dynamic SIR 
-def sim_sir(S, I, R, beta, gamma, n_days = 100, beta_decay = None):
+def sim_sir(S, I, R, beta, gamma, n_days, beta_decay = None):
     N = S + I + R
     s, i, r = [S], [I], [R]
     for day in range(n_days):
@@ -527,6 +539,13 @@ def sim_sir(S, I, R, beta, gamma, n_days = 100, beta_decay = None):
 
     s, i, r = np.array(s), np.array(i), np.array(r)
     return s, i, r</code></pre>
+<p>Run the model, assuming no decay in contact rate over the next 30 days.</p>
+<pre class="python"><code>n_days = 30
+beta_decay = 0.0
+
+s, i, r = sim_sir(S, I, R, beta, gamma, n_days, beta_decay = beta_decay)</code></pre>
+<p><strong>ERROR</strong>: <code>Error in py_call_impl(callable, dots$args, dots$keywords) :</code> <code>TypeError: unsupported operand type(s) for +: 'float' and 'type'</code></p>
+<p>We now inspect the results of this model</p>
 </div>
 
 

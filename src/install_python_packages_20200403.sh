@@ -10,7 +10,8 @@
 
 # For macOS:
 conda create --name env_sflCHIME python=3.6 pandas numpy altair
-source activate env_sflCHIME
+# source activate env_sflCHIME
+conda activate env_sflCHIME
 pip install streamlit
 
 # For Windows:
