@@ -84,7 +84,7 @@ def sir(y, beta, gamma, N):
         In = 0
     if Rn < 0:
         Rn = 0
-
+    
     scale = N / (Sn + In + Rn)
     return Sn * scale, In * scale, Rn * scale
 
@@ -100,7 +100,7 @@ def sim_sir(S, I, R, beta, gamma, n_days, beta_decay=None):
         s.append(S)
         i.append(I)
         r.append(R)
-
+    
     s, i, r = np.array(s), np.array(i), np.array(r)
     return s, i, r
 
