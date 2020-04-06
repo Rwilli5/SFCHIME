@@ -1,0 +1,36 @@
+---
+title: "CHIME Interactive"
+author: "Anshul Saxena and Gabriel Odom"
+date: "4/4/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+We need to load some R packages before we can perform our computing.
+```{r, message=FALSE}
+library(reticulate)
+library(tidyverse)
+```
+
+The shell script to install the packages we need is in `src/install_python_packages_20200403.sh`. This creates a conda environment called `env_sflCHARM` and activates it.
+
+We also have some Python libraries to load.
+```{python}
+from functools import reduce
+from typing import Tuple, Dict, Any
+import pandas as pd
+import streamlit as st
+import numpy as np
+import altair as alt
+```
+
+
+Now, we want to set our initial parameters.
+```{python}
+
+```
+

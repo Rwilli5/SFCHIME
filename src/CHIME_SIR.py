@@ -5,10 +5,17 @@ Created on Fri Apr  3 14:26:07 2020
 @author: Anshul
 """
 
+"""
+# In the terminal, we need to set up a python environment first:
+conda create --name env_sflCHARM python=3.6 pandas numpy altair
+source activate env_sflCHARM
+pip install streamlit
+"""
+
 from functools import reduce
 from typing import Tuple, Dict, Any
 import pandas as pd
-import streamlit as st
+# import streamlit as st
 import numpy as np
 import altair as alt
 
