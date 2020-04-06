@@ -2,7 +2,7 @@
 title: "CHIME Interactive"
 author: "Anshul Saxena and Gabriel Odom"
 date: "4/4/2020"
-output: html_document
+output: word_document
 ---
 
 ```{r setup, include=FALSE}
@@ -208,7 +208,7 @@ def sim_sir(S, I, R, beta, gamma, n_days, beta_decay = None):
 ```
 
 Run the model, assuming no decay in contact rate over the next 30 days.
-```{python}
+```{python, eval=FALSE}
 n_days = 30
 beta_decay = 0.0
 
