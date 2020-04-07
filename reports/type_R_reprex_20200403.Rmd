@@ -1,0 +1,41 @@
+---
+title: "CHIME Interactive"
+author: "Anshul Saxena and Gabriel Odom"
+date: "4/4/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+We need to load some R packages before we can perform our computing.
+```{r, message=FALSE}
+library(reticulate)
+library(tidyverse)
+```
+
+```{r}
+use_python(
+    "/Users/gabrielodom/anaconda3/envs/env_sflCHIME/bin/python",
+    required = TRUE
+)
+```
+
+Python chunk 1
+```{python}
+S = 0.0
+R = 0.0
+type(S)
+type(R)
+```
+
+Python chunk 2
+```{python}
+print(S)
+type(S)
+print(R)
+type(R)
+```
+**WHAT FRESH HELL IS THIS?**
