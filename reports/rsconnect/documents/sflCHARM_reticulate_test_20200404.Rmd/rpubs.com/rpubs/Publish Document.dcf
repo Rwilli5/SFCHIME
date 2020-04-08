@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/595791/05ecd667216f4ac68c6f025086c2382a
+bundleId: https://api.rpubs.com/api/v1/document/595791/05ecd667216f4ac68c6f025086c2382a
+url: http://rpubs.com/gabrielodom/595791
+when: 1586221756.24088

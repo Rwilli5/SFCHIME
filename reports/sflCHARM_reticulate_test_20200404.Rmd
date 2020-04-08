@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+**THIS IS A TEST OF THE REPORTING AND PUBLISHING CAPABILITIES OF THE `reticulate` PACKAGE LINKING PYTHON TO RMARKDOWN. THIS REPORT IS NOT INTENDED TO PROVIDE ANY INSIGHT INTO THE CURRENT COVID-19 PANDEMIC IN MIAMI-DADE COUNTY. INSPECT AT YOUR OWN RISK.**
+
 ## Setup
 We need to load some R packages before we can perform our computing.
 ```{r, message=FALSE}
