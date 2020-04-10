@@ -1,0 +1,274 @@
+---
+title: "Test Miami-Dade SIR Report"
+author: "Anshul Saxena and Gabriel Odom"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Overview
+Given daily updates from Miami-Dade EMS, we would like to re-assess the models that fit the COVID-19 pandemic best for this county. However, note that these estimates depend on a wide variety of things being correct: the data we have, the models we choose, the tuning parameters for these models, and the assumptions we make for these models.
+
+## Setup
+We need to load some R packages before we can perform our computing.
+```{r, message=FALSE}
+library(reticulate)
+library(tidyverse)
+```
+
+This code is hosted at <https://github.com/Rwilli5/SFCHIME>. The shell script to install the packages we need is in `src/install_python_packages_20200403.sh`. This creates a conda environment called `env_sflCHIME` and activates it. *NOTE: At current, I have been unable to run these commands on Windows.*
+
+On Mac, I have a Conda environment created for this project. In the terminal, I type `which python` and it tells me
+```
+/Users/gabrielodom/anaconda3/envs/env_sflCHIME/bin/python
+```
+
+If, during your replication of this work, it says
+```
+/usr/bin/python
+```
+(or some other place), then something is wrong.
+
+I specifically want this python environment mentioned above, so I use the `use_python()` function to "point" the `reticulate` package to the particular environment that we installed with Anaconda, replete with the version of Python we selected and all associated libraries. (**NOTE**: this line must be executed before any other `reticulate` functions or Python calls, otherwise it will have no effect.)
+```{r}
+use_python(
+    "/Users/gabrielodom/anaconda3/envs/env_sflCHIME/bin/python",
+    required = TRUE
+)
+```
+
+Now that we have a working install of Python with the necessary environment, we then load some Python libraries.
+```{python}
+from functools import reduce
+from typing import Tuple, Dict, Any
+import pandas as pd
+import streamlit as st
+import numpy as np
+import altair as alt
+```
+
+
+*******************************************************************************
+</br>
+
+## Parameters
+Now, we want to set our initial parameters. We organise them the same way as on the CHARM app (see <https://pennchime.herokuapp.com/> for comparison).
+
+### Hospital Parameters
+```{python}
+# Regional Population
+S_default = 2761581.0
+
+# Hospital Market Share
+Penn_market_share = 1.0
+
+# Currently Hospitalised Patients (at current hospital?)
+known_cases = 636.0
+current_hosp = known_cases
+```
+
+We set the population of Miami-Dade to `r format(py$S_default)` and the number of currently-hospitalised patients to `r py$known_cases`.
+
+### Spread and Contact Parameters
+```{python}
+# First Case Date
+first_case = "2020-03-11"
+
+# Doubling Time
+doubling_time = 6.0
+
+# Social Distancing (% reduction in social contact)
+relative_contact_rate = 0.1
+```
+
+Based on conversations with Baptist Health South Florida and Miami-Dade EMS, we set the date of the first recorded COVID-19 hospitalisation to `r py$first_case`. Based on the data we have received from Miami-Dade EMS, the parameters that best fit the *current* state of the pandemic are a doubling time of `r py$doubling_time` and a reduction of social distancing at `r py$relative_contact_rate` percent. We know that these are not close to the known values of these parameters, but the SIR-D model is not flexible enough to account for changing values over time. Therefore, these values are the parameter values that best fit the overall effect of the pandemic.
+
+### Severity Rates
+```{python}
+# Hospitalisation (% of total infections)
+hosp_rate = 0.2
+
+# ICU (% of total infections)
+icu_rate = (215 / 636) * hosp_rate
+
+# Ventilated (% of total infections)
+vent_rate = (166/636) * hosp_rate
+
+# Death (% of total infections)
+death_rate = 0.8 * vent_rate + (1 - hosp_rate) * 0.0066
+# 0.0066 based on Lancet paper: https://doi.org/10.1016/S1473-3099(20)30243-7
+```
+
+### Severity Times
+```{python}
+# Infectious Days
+recovery_days = 17.0
+
+# # Average hospital length of stay (days)
+# hosp_los = 7.0
+# 
+# # Average ICU length of stay (days)
+# icu_los = 9.0
+# 
+# # Average length of stay on a ventilator (days)
+# vent_los = 5.0
+```
+
+
+## Directly Estimated Parameters
+Given the parameters above, we calculate the following disease spread parameters.
+
+### SIR Initial Values
+```{python}
+total_infections = current_hosp / Penn_market_share / hosp_rate
+print(total_infections)
+
+Infct = total_infections
+Susc, Infct, Recov, Dead = S_default - Infct, Infct, 0.0, 0.0
+print(Susc)
+print(Infct)
+
+intrinsic_growth_rate = 2 ** (1 / doubling_time) - 1
+print(intrinsic_growth_rate)
+```
+**NOTE**: the total infections and initial infections are equal at $t = 0$.
+
+### SIRD Transition Rates
+```{python}
+gamma = 1.0 / recovery_days
+# mean recovery rate, gamma, (in 1/days).
+print(gamma)
+
+beta = (intrinsic_growth_rate + gamma) / Susc * (1.0 - relative_contact_rate)
+# Contact rate, beta
+# {rate based on doubling time} / {initial Susc}
+print(beta)
+
+mu = death_rate
+# Death rate, mu
+
+r_t = beta / gamma * Susc 
+# Current Reproduction Number
+# r_t is r_0 after distancing
+print(r_t)
+
+r_naught = r_t / (1.0 - relative_contact_rate)
+# Initial Reproduction Number
+print(r_naught)
+
+doubling_time_t = 1.0 / np.log2(beta * Susc - gamma + 1.0) 
+# Current Doubling Time
+# doubling time after distancing
+print(doubling_time_t)
+```
+
+As an aside, if I want to access any of these values in R (for instance, $R_0$), I can call them as `py$r_naught`, which yields `r py$r_naught`.
+
+*******************************************************************************
+</br>
+
+## Model Specification
+We can now specify the SIRD model at outset and over time.
+```{python}
+# SIR at Outset
+def sird(y, beta, gamma, mu, N):
+    S, I, R, D = y
+    Sn = (-beta * S * I) + S
+    In = (beta * S * I - gamma * I - mu * I) + I
+    Rn = gamma * I + R
+    Dn = mu * I + D
+    if Sn < 0:
+        Sn = 0.0
+    if In < 0:
+        In = 0.0
+    if Rn < 0:
+        Rn = 0.0
+    if Dn < 0:
+        Dn = 0.0
+    
+    scale = N / (Sn + In + Rn + Dn)
+    return Sn * scale, In * scale, Rn * scale, Dn * scale
+    
+
+# Dynamic SIR 
+def sim_sird(S, I, R, D, beta, gamma, mu, n_days, beta_decay = None):
+    N = S + I + R + D
+    s, i, r, d = [S], [I], [R], [D]
+    for day in range(n_days):
+        y = S, I, R, D
+        S, I, R, D = sird(y, beta, gamma, mu, N)
+        if beta_decay:
+            beta = beta * (1 - beta_decay)
+        s.append(S)
+        i.append(I)
+        r.append(R)
+        d.append(D)
+            
+    s, i, r, d = np.array(s), np.array(i), np.array(r), np.array(d)
+    return s, i, r, d
+    
+
+```
+
+Run the model, assuming no decay in contact rate over the next 30 days.
+```{python}
+n_days = 100
+beta_decay = 0.01
+
+s, i, r, d = sim_sird(
+  Susc, Infct, Recov, Dead, beta, gamma, mu, n_days, beta_decay = beta_decay
+)
+```
+**ERROR**: `Error in py_call_impl(callable, dots$args, dots$keywords) : `
+`  TypeError: unsupported operand type(s) for +: 'float' and 'type'`  
+**SOLUTION**: I can't have a Python object named `R`.
+
+We now inspect the results of this model
+```{r}
+res_df <- tibble(
+    days  = seq_len(py$n_days + 1),
+    Susc  = py$s,
+    Infct = py$i,
+    Recov = py$r,
+    Dead  = py$d
+) %>% 
+  mutate(
+    Hosp = Infct * py$hosp_rate,
+    ICU  = Infct * py$icu_rate,
+    Vent = Infct * py$vent_rate
+  ) %>% 
+  mutate(
+    Date = lubridate::ymd(py$first_case) + days
+  )
+
+
+ggplot(data = res_df) +
+  aes(x = Date) +
+  # scale_y_log10(breaks = 3 * 10^(0:7)) +
+  scale_x_date(date_breaks = "2 weeks") +
+  
+  geom_line(aes(y = Hosp), colour = "yellow") + 
+  geom_line(aes(y = Vent), colour = "orange")
+
+
+ggplot(data = res_df) +
+  aes(x = Date) +
+  # scale_y_log10(breaks = 3 * 10^(0:7)) +
+  scale_x_date(date_breaks = "2 weeks") +
+  
+  geom_line(aes(y = Susc), colour = "black", linetype = "dashed") + 
+  
+  geom_line(aes(y = Infct), colour = "green", linetype = "dashed") + 
+  geom_line(aes(y = Hosp), colour = "yellow") + 
+  geom_line(aes(y = Vent), colour = "orange") + 
+  geom_line(aes(y = Dead), colour = "red", linetype = "dashed") + 
+  
+  geom_line(aes(y = Recov), colour = "blue", linetype = "dashed")
+```
+

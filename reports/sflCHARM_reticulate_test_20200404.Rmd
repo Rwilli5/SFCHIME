@@ -200,7 +200,6 @@ def sir(y, beta, gamma, N):
 
     scale = N / (Sn + In + Rn)
     return Sn * scale, In * scale, Rn * scale
-    return S, I, R
     
 # type(Recov)
 
